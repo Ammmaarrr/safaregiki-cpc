@@ -1,1 +1,0 @@
-# safaregiki-cpc
