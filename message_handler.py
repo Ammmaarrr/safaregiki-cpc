@@ -8,7 +8,8 @@ from whatsapp_client import (
     send_welcome_message, send_main_menu, send_destination_selection,
     send_status_menu, send_faq_message, send_text_message,
     send_button_message, send_list_message, send_payment_info,
-    send_screenshot_upload_link, send_admin_menu, send_admin_response
+    send_screenshot_upload_link, send_admin_menu, send_admin_response,
+    send_faq_response_with_menu
 )
 from database import (
     get_available_dates_by_route, get_date_info, get_available_seats,
@@ -16,6 +17,7 @@ from database import (
     get_supabase_client
 )
 from admin_handler import is_admin, handle_admin_command, handle_admin_button
+from faq_handler import get_faq_response_by_category, handle_faq_question
 
 # Welcome image URL - Replace with your actual image URL
 WELCOME_IMAGE_URL = "https://your-domain.com/welcome-image.png"
@@ -78,6 +80,12 @@ async def handle_text_message(phone: str, text: str) -> None:
         await send_welcome_message(phone, WELCOME_IMAGE_URL)
         return
     
+    # FAQ command
+    if text_lower in ["faq", "help", "question", "questions"]:
+        set_state(phone, ConversationState.FAQ_QUESTION)
+        await send_faq_message(phone)
+        return
+    
     # State-specific handling
     if state == ConversationState.AWAITING_NAME:
         await handle_name_input(phone, text)
@@ -94,9 +102,43 @@ async def handle_text_message(phone: str, text: str) -> None:
     elif state == ConversationState.AWAITING_BOOKING_PHONE:
         await handle_booking_phone_lookup(phone, text)
     
+    elif state == ConversationState.FAQ_QUESTION:
+        # User is asking a FAQ question - use RAG
+        await handle_user_faq_question(phone, text)
+    
     else:
-        # Default: show welcome/main menu
-        await send_welcome_message(phone, WELCOME_IMAGE_URL)
+        # Check if this looks like a question - use RAG
+        if is_question(text):
+            await handle_user_faq_question(phone, text)
+        else:
+            # Default: show welcome/main menu
+            await send_welcome_message(phone, WELCOME_IMAGE_URL)
+
+
+def is_question(text: str) -> bool:
+    """Check if text looks like a question"""
+    text_lower = text.lower()
+    question_indicators = [
+        "?", "what", "when", "where", "how", "why", "which", "who",
+        "is there", "are there", "can i", "do you", "does", "will",
+        "fare", "price", "cost", "date", "time", "seat", "luggage",
+        "bag", "route", "return", "pickup", "drop", "location"
+    ]
+    return any(indicator in text_lower for indicator in question_indicators)
+
+
+async def handle_user_faq_question(phone: str, text: str) -> None:
+    """Handle user's FAQ question using RAG"""
+    supabase = get_supabase_client()
+    
+    # Get answer using RAG
+    response = await handle_faq_question(text, supabase)
+    
+    # Send response with menu options
+    await send_faq_response_with_menu(phone, response)
+    
+    # Keep in FAQ state so they can ask more questions
+    set_state(phone, ConversationState.FAQ_QUESTION)
 
 
 async def handle_button_reply(phone: str, button_id: str) -> None:
@@ -119,6 +161,7 @@ async def handle_button_reply(phone: str, button_id: str) -> None:
         await send_status_menu(phone)
     
     elif button_id == "faq":
+        set_state(phone, ConversationState.FAQ_QUESTION)
         await send_faq_message(phone)
     
     elif button_id == "main_menu":
@@ -175,10 +218,35 @@ async def handle_list_reply(phone: str, list_id: str) -> None:
             await send_main_menu(phone)
         return
     
+    # FAQ category selections
+    if list_id.startswith("faq_"):
+        supabase = get_supabase_client()
+        category = list_id.replace("faq_", "")
+        
+        # Map short names to full category names
+        category_map = {
+            "dates": "dates_schedule",
+            "fares": "fares",
+            "route": "route",
+            "return": "return_service",
+            "luggage": "luggage",
+            "locations": "locations",
+            "seats": "seats",
+            "general": "general"
+        }
+        
+        full_category = category_map.get(category, category)
+        response = get_faq_response_by_category(full_category, supabase)
+        await send_faq_response_with_menu(phone, response)
+        set_state(phone, ConversationState.FAQ_QUESTION)
+        return
+    
+    # Date selection
     if list_id.startswith("date_"):
         date_id = list_id.replace("date_", "")
         await handle_date_selection(phone, date_id)
     
+    # Seat selection
     elif list_id.startswith("seat_"):
         seat_number = list_id.replace("seat_", "")
         await handle_seat_selection(phone, int(seat_number))

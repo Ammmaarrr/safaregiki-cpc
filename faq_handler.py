@@ -73,44 +73,64 @@ def get_faq_response_by_category(category: str, supabase_client) -> str:
 
 def get_dates_schedule_response(supabase) -> str:
     """Get dates and schedule info from settings"""
+    # Default values
+    outbound_desc = "Saturday 3rd January 2026 and Sunday 4th January 2026"
+    return_desc = "Sunday 18th January 2026 for both Multan and Bahawalpur"
+    schedule_normal = "During mid or semester breaks"
+    schedule_note = "Schedule may change if required"
+    
     try:
         outbound = supabase.table("business_settings").select("setting_value").eq("setting_key", "outbound_dates").single().execute()
         return_info = supabase.table("business_settings").select("setting_value").eq("setting_key", "return_service").single().execute()
         schedule = supabase.table("business_settings").select("setting_value").eq("setting_key", "service_schedule").single().execute()
         
-        outbound_data = outbound.data["setting_value"] if outbound.data else {}
-        return_data = return_info.data["setting_value"] if return_info.data else {}
-        schedule_data = schedule.data["setting_value"] if schedule.data else {}
+        if outbound.data:
+            outbound_data = outbound.data.get("setting_value", {})
+            outbound_desc = outbound_data.get("description", outbound_desc)
         
-        response = """📅 *Dates & Schedule*
+        if return_info.data:
+            return_data = return_info.data.get("setting_value", {})
+            return_desc = return_data.get("description", return_desc)
+        
+        if schedule.data:
+            schedule_data = schedule.data.get("setting_value", {})
+            schedule_normal = schedule_data.get("normal_schedule", schedule_normal)
+            schedule_note = schedule_data.get("note", schedule_note)
+    except Exception as e:
+        print(f"Error getting dates (using defaults): {e}")
+    
+    response = f"""📅 *Dates & Schedule*
 
 *Outbound Service:*
-""" + outbound_data.get("description", "Dates TBD") + """
+{outbound_desc}
 
 *Return Service:*
-""" + return_data.get("description", "Return dates TBD") + """
+{return_desc}
 
 *Regular Schedule:*
-""" + schedule_data.get("normal_schedule", "During semester breaks") + """
+{schedule_normal}
 
-ℹ️ """ + schedule_data.get("note", "Schedule may change if required")
-        
-        return response
-    except Exception as e:
-        print(f"Error getting dates: {e}")
-        return "📅 *Dates & Schedule*\n\nOutbound: Saturday 3rd & Sunday 4th January 2026\nReturn: Sunday 18th January 2026"
+ℹ️ {schedule_note}"""
+    
+    return response
 
 
 def get_fares_response(supabase) -> str:
     """Get fare information from settings"""
+    # Default values
+    multan_fare = 3500
+    bahawalpur_fare = 4200
+    
     try:
         fares = supabase.table("business_settings").select("setting_value").eq("setting_key", "fares").single().execute()
-        fares_data = fares.data["setting_value"] if fares.data else {}
-        
-        multan_fare = fares_data.get("multan", 3500)
-        bahawalpur_fare = fares_data.get("bahawalpur", 4200)
-        
-        response = f"""💰 *Ticket Fares*
+        if fares.data:
+            fares_data = fares.data.get("setting_value", {})
+            multan_fare = fares_data.get("multan", 3500)
+            bahawalpur_fare = fares_data.get("bahawalpur", 4200)
+    except Exception as e:
+        print(f"Error getting fares (using defaults): {e}")
+    
+    response = f"""💰 *Ticket Fares*
 
 🏙️ *GIKI → Multan:* Rs. {multan_fare:,}
 🏙️ *GIKI → Bahawalpur:* Rs. {bahawalpur_fare:,}
@@ -118,44 +138,52 @@ def get_fares_response(supabase) -> str:
 📝 *Note:* Bahawalpur fare is higher as the bus continues from Multan to Bahawalpur after dropping Multan passengers.
 
 💳 Payment via bank transfer after booking."""
-        
-        return response
-    except Exception as e:
-        print(f"Error getting fares: {e}")
-        return "💰 *Fares*\n\nMultan: Rs. 3,500\nBahawalpur: Rs. 4,200"
+    
+    return response
 
 
 def get_route_response(supabase) -> str:
     """Get route information from settings"""
+    # Default value
+    route_desc = "Bus service for GIKI students. Buses go to Multan first, then continue to Bahawalpur to drop remaining students."
+    
     try:
         route = supabase.table("business_settings").select("setting_value").eq("setting_key", "route_info").single().execute()
-        route_data = route.data["setting_value"] if route.data else {}
-        
-        response = """🗺️ *Route Information*
+        if route.data:
+            route_data = route.data.get("setting_value", {})
+            route_desc = route_data.get("description", route_desc)
+    except Exception as e:
+        print(f"Error getting route (using defaults): {e}")
+    
+    response = f"""🗺️ *Route Information*
 
-*Service:* """ + route_data.get("description", "Bus service for GIKI students") + """
+*Service:* {route_desc}
 
 *Destinations:*
 1️⃣ Multan (First Stop)
 2️⃣ Bahawalpur (Final Stop)
 
 📝 Both destinations use the same bus. Multan students are dropped first, then the bus continues to Bahawalpur."""
-        
-        return response
-    except Exception as e:
-        print(f"Error getting route: {e}")
-        return "🗺️ *Route*\n\nGIKI → Multan → Bahawalpur\n\nSame bus for both destinations."
+    
+    return response
 
 
 def get_return_service_response(supabase) -> str:
     """Get return service information"""
+    # Default value
+    return_desc = "Sunday 18th January 2026 for both Multan and Bahawalpur"
+    
     try:
         return_info = supabase.table("business_settings").select("setting_value").eq("setting_key", "return_service").single().execute()
-        return_data = return_info.data["setting_value"] if return_info.data else {}
-        
-        response = """🔄 *Return Service*
+        if return_info.data:
+            return_data = return_info.data.get("setting_value", {})
+            return_desc = return_data.get("description", return_desc)
+    except Exception as e:
+        print(f"Error getting return info (using defaults): {e}")
+    
+    response = f"""🔄 *Return Service*
 
-*Return Date:* """ + return_data.get("description", "Sunday 18th January 2026") + """
+*Return Date:* {return_desc}
 
 *Pickup Points:*
 • Bahawalpur → GIKI
@@ -163,23 +191,26 @@ def get_return_service_response(supabase) -> str:
 
 📝 Same pricing applies for return journey.
 Book your return ticket through the booking menu!"""
-        
-        return response
-    except Exception as e:
-        print(f"Error getting return info: {e}")
-        return "🔄 *Return Service*\n\nReturn to GIKI: Sunday 18th January 2026\nAvailable from both Multan and Bahawalpur."
+    
+    return response
 
 
 def get_luggage_response(supabase) -> str:
     """Get luggage policy from settings"""
+    # Default values
+    max_bags = 2
+    bag_size = "medium"
+    
     try:
         luggage = supabase.table("business_settings").select("setting_value").eq("setting_key", "luggage_policy").single().execute()
-        luggage_data = luggage.data["setting_value"] if luggage.data else {}
-        
-        max_bags = luggage_data.get("max_bags", 2)
-        bag_size = luggage_data.get("bag_size", "medium")
-        
-        response = f"""🧳 *Luggage Policy*
+        if luggage.data:
+            luggage_data = luggage.data.get("setting_value", {})
+            max_bags = luggage_data.get("max_bags", 2)
+            bag_size = luggage_data.get("bag_size", "medium")
+    except Exception as e:
+        print(f"Error getting luggage (using defaults): {e}")
+    
+    response = f"""🧳 *Luggage Policy*
 
 *Allowed:*
 • {max_bags} {bag_size}-sized bags maximum
@@ -191,51 +222,51 @@ def get_luggage_response(supabase) -> str:
 
 ⚠️ *Recommendation:*
 Please pack light. Only bring what you need to ensure comfortable travel for everyone."""
-        
-        return response
-    except Exception as e:
-        print(f"Error getting luggage: {e}")
-        return "🧳 *Luggage*\n\n2 medium bags + 1 hand carry\nNo extra charge, but excess may go with your seat."
+    
+    return response
 
 
 def get_locations_response(supabase) -> str:
     """Get pickup/drop locations from settings"""
+    # Default values
+    status = "TBD"
+    note = "Exact bus locations will be shared closer to travel date"
+    location_list = []
+    
     try:
         locations = supabase.table("business_settings").select("setting_value").eq("setting_key", "pickup_locations").single().execute()
-        loc_data = locations.data["setting_value"] if locations.data else {}
-        
-        status = loc_data.get("status", "TBD")
-        note = loc_data.get("note", "Locations will be shared soon")
-        location_list = loc_data.get("locations", [])
-        
-        if status == "TBD" or not location_list:
-            response = """📍 *Pickup & Drop Locations*
+        if locations.data:
+            loc_data = locations.data.get("setting_value", {})
+            status = loc_data.get("status", "TBD")
+            note = loc_data.get("note", note)
+            location_list = loc_data.get("locations", [])
+    except Exception as e:
+        print(f"Error getting locations (using defaults): {e}")
+    
+    if status == "TBD" or not location_list:
+        response = f"""📍 *Pickup & Drop Locations*
 
 ⏳ *Status:* To Be Announced
 
-""" + note + """
+{note}
 
 Stay tuned! We'll update you once locations are finalized.
 
 💡 Tip: Check back closer to travel date for exact locations."""
-        else:
-            response = """📍 *Pickup & Drop Locations*
-
-"""
-            for loc in location_list:
-                response += f"📌 {loc}\n"
-        
-        return response
-    except Exception as e:
-        print(f"Error getting locations: {e}")
-        return "📍 *Locations*\n\nExact locations will be shared closer to travel date."
+    else:
+        response = "📍 *Pickup & Drop Locations*\n\n"
+        for loc in location_list:
+            response += f"📌 {loc}\n"
+    
+    return response
 
 
 def get_seats_response(supabase) -> str:
     """Get real-time seats availability from database"""
     try:
         # Get available dates with bus info
-        dates = supabase.table("available_dates").select("*, buses(*)").gte("date", "2024-01-01").order("date").execute()
+        from datetime import date
+        dates = supabase.table("available_dates").select("*, buses(*)").gte("date", date.today().isoformat()).order("date").execute()
         
         if not dates.data:
             return "💺 *Seats Availability*\n\nNo upcoming trips scheduled. Check back later!"
@@ -243,11 +274,11 @@ def get_seats_response(supabase) -> str:
         response = "💺 *Seats Availability*\n\n"
         
         for date_info in dates.data:
-            bus = date_info.get("buses", {})
+            bus = date_info.get("buses", {}) or {}
             route = date_info.get("route", "Unknown")
             travel_date = date_info.get("date", "")
             seats_available = date_info.get("seats_available", 0)
-            total_seats = bus.get("total_seats", 0)
+            total_seats = bus.get("total_seats", 0) if bus else 0
             
             # Calculate percentage
             if total_seats > 0:
@@ -269,7 +300,7 @@ def get_seats_response(supabase) -> str:
         return response
     except Exception as e:
         print(f"Error getting seats: {e}")
-        return "💺 *Seats*\n\nUnable to fetch availability. Please try booking to see options."
+        return "💺 *Seats*\n\nUnable to fetch availability. Please try booking to see available seats."
 
 
 def get_general_response(supabase) -> str:
@@ -366,47 +397,55 @@ def search_knowledge_base(query: str, supabase_client) -> Optional[str]:
 async def handle_faq_question(query: str, supabase_client) -> str:
     """
     Handle a free-form FAQ question.
-    First tries keyword search, then falls back to general response.
+    First tries keyword search, then falls back to category-based response.
     """
-    # Try keyword-based search first
-    kb_answer = search_knowledge_base(query, supabase_client)
+    query_lower = query.lower().strip()
     
-    if kb_answer:
-        return f"💡 *Answer:*\n\n{kb_answer}\n\n_Need more help? Select a category or ask another question._"
+    # Try keyword-based search first (if knowledge_base table exists)
+    try:
+        kb_answer = search_knowledge_base(query, supabase_client)
+        if kb_answer:
+            return f"💡 *Answer:*\n\n{kb_answer}\n\n_Need more help? Select a category or ask another question._"
+    except Exception as e:
+        print(f"KB search error (table may not exist): {e}")
     
-    # Check for specific keywords to provide targeted responses
-    query_lower = query.lower()
-    
-    if any(word in query_lower for word in ["price", "fare", "cost", "ticket"]):
+    # Fall back to category-based responses using keywords
+    if any(word in query_lower for word in ["price", "fare", "cost", "ticket", "kitna", "paisa", "rupee"]):
         return get_fares_response(supabase_client)
     
-    elif any(word in query_lower for word in ["date", "when", "schedule"]):
+    elif any(word in query_lower for word in ["date", "when", "schedule", "timing", "time", "kab", "january", "jan"]):
         return get_dates_schedule_response(supabase_client)
     
-    elif any(word in query_lower for word in ["luggage", "bag", "baggage"]):
+    elif any(word in query_lower for word in ["luggage", "bag", "baggage", "saman", "weight", "carry"]):
         return get_luggage_response(supabase_client)
     
-    elif any(word in query_lower for word in ["seat", "available", "left"]):
+    elif any(word in query_lower for word in ["seat", "available", "left", "remaining", "kitni seat"]):
         return get_seats_response(supabase_client)
     
-    elif any(word in query_lower for word in ["return", "back"]):
+    elif any(word in query_lower for word in ["return", "back", "wapsi", "واپسی"]):
         return get_return_service_response(supabase_client)
     
-    elif any(word in query_lower for word in ["route", "multan", "bahawalpur"]):
+    elif any(word in query_lower for word in ["route", "multan", "bahawalpur", "bwp", "path", "stop"]):
         return get_route_response(supabase_client)
     
-    elif any(word in query_lower for word in ["location", "pickup", "drop", "where"]):
+    elif any(word in query_lower for word in ["location", "pickup", "drop", "where", "kahan", "point", "stand"]):
         return get_locations_response(supabase_client)
     
-    # Default response
+    elif any(word in query_lower for word in ["book", "how", "kaise", "reserve", "process"]):
+        return get_general_response(supabase_client)
+    
+    # Default response with helpful suggestions
     return """🤔 I couldn't find a specific answer to your question.
 
-Please try:
-1️⃣ Selecting a category from the FAQ menu
-2️⃣ Rephrasing your question
-3️⃣ Using keywords like: fare, date, route, luggage, seat
+*Try asking about:*
+• 💰 Fares - "What is the fare to Multan?"
+• 📅 Dates - "When are the buses running?"
+• 🧳 Luggage - "What's the luggage policy?"
+• 💺 Seats - "How many seats are available?"
+• 🔄 Return - "Is there a return service?"
+• 📍 Locations - "Where is the pickup point?"
 
-Or type 'menu' to go back to main menu."""
+Or select a category from the FAQ menu above!"""
 
 
 # ============================================

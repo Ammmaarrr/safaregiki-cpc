@@ -196,35 +196,38 @@ async def send_status_menu(to: str) -> bool:
 
 
 async def send_faq_message(to: str) -> bool:
-    """Send FAQ information"""
-    faq_text = """❓ *Frequently Asked Questions*
+    """Send FAQ categories menu with option to type question"""
+    body_text = """❓ *FAQ - Frequently Asked Questions*
 
-*Q: What routes are available?*
-A: We operate between GIKI and Multan.
+Select a category below, or simply *type your question* and I'll find the answer for you!
 
-*Q: What bus types do you offer?*
-A: Business (27 seats), Executive (49 seats), and Sleeper (34 seats).
-
-*Q: How do I pay?*
-A: Currently via bank transfer. Upload your payment screenshot after booking.
-
-*Q: How do I check my booking?*
-A: Click 'Status' → 'Your Booking' and enter your phone number.
-
-*Q: Can I cancel my booking?*
-A: Contact our support for cancellation requests.
-
-*Q: What amenities are included?*
-A: AC, charging ports, and refreshments. Executive adds WiFi & extra legroom. Sleeper includes berths & blankets.
-
-*Q: What ID format is required?*
-A: Student ID: 202XXXX format
-   Phone: 03XXXXXXXXX format"""
+Example questions you can ask:
+• "What is the fare to Multan?"
+• "When are the buses running?"
+• "What's the luggage policy?"
+"""
     
-    await send_text_message(to, faq_text)
+    sections = [{
+        "title": "FAQ Categories",
+        "rows": [
+            {"id": "faq_dates", "title": "📅 Dates & Schedule", "description": "Travel dates and timings"},
+            {"id": "faq_fares", "title": "💰 Fares", "description": "Ticket prices for all routes"},
+            {"id": "faq_route", "title": "🗺️ Route Info", "description": "Destinations and stops"},
+            {"id": "faq_return", "title": "🔄 Return Service", "description": "Return journey details"},
+            {"id": "faq_luggage", "title": "🧳 Luggage Policy", "description": "Baggage rules and limits"},
+            {"id": "faq_locations", "title": "📍 Pickup/Drop Points", "description": "Bus stop locations"},
+            {"id": "faq_seats", "title": "💺 Seats Availability", "description": "Check available seats"},
+            {"id": "faq_general", "title": "❓ General", "description": "Booking help and more"},
+        ]
+    }]
     
-    buttons = [{"id": "main_menu", "title": "🔙 Main Menu"}]
-    return await send_button_message(to, "Need anything else?", buttons)
+    return await send_list_message(
+        to,
+        body_text,
+        "Select Category",
+        sections,
+        footer="Or just type your question!"
+    )
 
 
 async def send_payment_info(to: str, booking_id: str, amount: int) -> bool:

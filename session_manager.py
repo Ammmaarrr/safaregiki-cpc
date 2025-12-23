@@ -24,6 +24,12 @@ class ConversationState:
     
     # Status flow states
     AWAITING_BOOKING_PHONE = "awaiting_booking_phone"
+    
+    # FAQ states
+    FAQ_QUESTION = "faq_question"
+    
+    # Admin states
+    ADMIN_EDITING = "admin_editing"
 
 
 def get_session(phone: str) -> Dict[str, Any]:
